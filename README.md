@@ -6,7 +6,7 @@ Chick-pay Good
 
 main : 배포 시에만 merge
 
-dev : 개발이 진행되는 통합 브랜치
+sub : 개발이 진행되는 통합 브랜치
 
 feat/기능명 : 개별 기능별 개발 브랜치
 
