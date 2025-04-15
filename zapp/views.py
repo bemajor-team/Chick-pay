@@ -1,39 +1,37 @@
-from django.shortcuts import render ,redirect
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from .serializers import RegisterSerializer
-from django.contrib.auth import authenticate, login
-from django.contrib.auth.decorators import login_required
-from django.utils.decorators import method_decorator
-from .forms import LoginForm
-from django.views import View
+from django.shortcuts import render, redirect
+from django.contrib.auth import login
 from django.contrib import messages
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
-from .serializers import MyPageSerializer, PasswordChangeSerializer
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
-from .models import Cash
-from .serializers import CashSerializer, CashTransactionSerializer , TransferSerializer
-from .forms import PasswordChangeForm 
-from django.views import View
-from .models import CashTransaction , CustomUser ,CashTransfer  
 from django.core.paginator import Paginator
+from django.core.exceptions import PermissionDenied
+from django.views import View
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status 
+from rest_framework.decorators import api_view
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
+from django.shortcuts import render
+
+
+from .forms import LoginForm, PasswordChangeForm
+from .models import Cash, CashTransaction, CustomUser, CashTransfer
+from .serializers import (
+    RegisterSerializer,
+    MyPageSerializer,
+    CashSerializer,
+    CashTransactionSerializer,
+    TransferSerializer,
+)
+
 from django.db import transaction
+
 import pyotp
 import qrcode
 import base64
 from io import BytesIO
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
-from django.views.decorators.csrf import csrf_exempt
-
-
 
 class MainView(APIView):
     def get(self, request):
@@ -44,14 +42,23 @@ class RegisterView(APIView):
     def get(self, request):
         return render(request, 'register.html')
 
+
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            # 회원가입 성공 시 로그인 페이지로 리다이렉트
-            return redirect('login')  # 'login'은 urls.py에서 지정한 name 값
+            user = serializer.save()
+            # 회원가입 시 Cash 객체 생성
+            Cash.objects.create(user=user, balance=0)
+            return redirect('login')
         return render(request, 'register.html', {'form': serializer, 'errors': serializer.errors})
 
+    # def post(self, request):
+    #     serializer = RegisterSerializer(data=request.data)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         # 회원가입 성공 시 로그인 페이지로 리다이렉트
+    #         return redirect('login')  # 'login'은 urls.py에서 지정한 name 값
+    #     return render(request, 'register.html', {'form': serializer, 'errors': serializer.errors})
 
 class LoginView(APIView):
     def get(self, request):
@@ -65,15 +72,8 @@ class LoginView(APIView):
             return redirect('otp-setup')  # 로그인 후 이동할 페이지 이름
         return render(request, 'login.html', {"form": form, "errors": form.errors})
 
-
-@method_decorator(login_required, name='dispatch')
-class HomeView(APIView):
-    def get(self, request):
-        return render(request, 'home.html' )
-        
 class MyPageView(APIView):
     permission_classes = [IsAuthenticated]
-
     def get(self, request, *args, **kwargs):
         user = request.user
         cash = getattr(user, 'cash', None)
@@ -91,10 +91,9 @@ class MyPageView(APIView):
             'balance': cash.balance if cash else 0.00,
         }
         return render(request, 'mypage.html', context)
-
+    
 class PasswordChangeView(APIView):
     permission_classes = [IsAuthenticated]
-
     def post(self, request):
         form = PasswordChangeForm(request.data)
         
@@ -120,7 +119,6 @@ class PasswordChangeView(APIView):
             'form': form,
             'errors': form.errors
         })
-
 
 
 class CashDetailView(APIView):
@@ -171,9 +169,9 @@ class CashDepositView(APIView):
 
 
 
+class DepositCompleteView(APIView):
+    permission_classes = [IsAuthenticated]
 
-
-class DepositCompleteView(View):
     def get(self, request):
         user = request.user
         
@@ -245,7 +243,8 @@ class CashWithdrawView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class WithdrawCompleteView(View):
+class WithdrawCompleteView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         user = request.user
         
@@ -364,7 +363,8 @@ class CashTransferView(APIView):
 
 
 
-class TransferCompleteView(View):
+class TransferCompleteView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         user = request.user
 
@@ -381,8 +381,9 @@ class TransferCompleteView(View):
         }
 
         return render(request, 'transfer-complete.html', context)
-
-class AllTransactionView(View):
+    
+class AllTransactionView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         user = request.user
         cash = getattr(user, 'cash', None)
@@ -407,19 +408,20 @@ class AllTransactionView(View):
     
 
 
-@login_required
-@csrf_exempt
+# ✅ 실제 동작용 View (웹 페이지 렌더링)
 def otp_setup(request):
     user = request.user
 
-    if not user.otp_secret:
+    if not user.is_authenticated:
+        raise PermissionDenied
+
+    if not hasattr(user, 'otp_secret') or not user.otp_secret:
         user.otp_secret = pyotp.random_base32()
         user.save()
 
     totp = pyotp.TOTP(user.otp_secret)
     otp_uri = totp.provisioning_uri(name=user.email, issuer_name="CHICKPAY")
 
-    # QR코드 생성
     qr = qrcode.make(otp_uri)
     buffer = BytesIO()
     qr.save(buffer, format='PNG')
@@ -428,8 +430,7 @@ def otp_setup(request):
     if request.method == 'POST':
         otp_code = request.POST.get('otp_code')
         if totp.verify(otp_code):
-            # 여기서 사용자 OTP 인증 완료 처리
-            return redirect('main')  # 성공시 이동
+            return redirect('main')
         else:
             return render(request, 'otp_setup.html', {
                 'otp_secret': user.otp_secret,
@@ -441,4 +442,7 @@ def otp_setup(request):
         'otp_secret': user.otp_secret,
         'qr_code_url': f'data:image/png;base64,{qr_base64}'
     })
+
+def custom_403_view(request, exception=None):
+    return render(request, '403.html', status=403)
 

@@ -1,3 +1,5 @@
+{% load static %}
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -59,7 +61,12 @@
     <div class="container mx-auto px-4">
       <div class="flex items-center justify-between">
         <a href="" class="flex items-center gap-3">
-          <div class="text-4xl">🐥</div>
+
+
+          <div class="text-4xl">
+            <img src="{% static 'images/image.png' %}" alt="Chick Pay" class="w-[50px] h-auto">
+          </div>
+
           <h1 class="text-2xl font-bold text-chick-brown">Chick Pay</h1>
           {% if user.is_authenticated %}
           <p class="text-lg text-grey-700">안녕하세요, <strong>{{ user.name }}</strong>님!</p>
@@ -86,7 +93,9 @@
     </div>
   </header>
 
-  <section class="bg-gradient-to-b from-chick-yellow to-chick-light py-16">
+
+
+  <section class=" bg-gradient-to-b from-chick-yellow to-chick-light py-16">
     <div class="container mx-auto px-4">
       <div class="flex flex-col md:flex-row items-center justify-between gap-10">
         <div class="md:w-1/2">
@@ -117,7 +126,7 @@
         <div class="md:w-1/2 flex justify-center">
           <div class="relative">
             <div class="w-64 h-64 md:w-80 md:h-80 bg-white rounded-full shadow-xl flex items-center justify-center">
-              <div class="text-9xl animate-float">🐥</div>
+              <img src="{% static 'images/image.png' %}" alt="Chick Pay" class="w-30 h-30 animate-float">
             </div>
             <div
               class="absolute -top-5 -right-5 bg-chick-orange text-chick-brown text-sm font-bold py-2 px-4 rounded-full shadow-md transform rotate-12">
@@ -179,51 +188,6 @@
     </div>
   </section>
 
-  <!-- <section class="py-16 bg-white">
-    <div class="container mx-auto px-4">
-      <div class="flex flex-col md:flex-row items-center gap-12">
-        <div class="md:w-1/2">
-          <img src="" alt="모바일 앱 화면" class="rounded-3xl shadow-lg" />
-        </div>
-        <div class="md:w-1/2">
-          <h2 class="text-3xl font-bold text-chick-brown mb-6">
-            언제 어디서나<br />모바일로 간편하게
-          </h2>
-          <div class="space-y-6">
-            <div class="flex items-start gap-4">
-              <div class="text-2xl text-chick-orange">✓</div>
-              <div>
-                <h3 class="font-bold text-lg mb-1">실시간 계좌 관리</h3>
-                <p class="text-gray-600">
-                  모든 계좌의 잔액과 거래내역을 실시간으로 확인할 수 있습니다.
-                </p>
-              </div>
-            </div>
-            <div class="flex items-start gap-4">
-              <div class="text-2xl text-chick-orange">✓</div>
-              <div>
-                <h3 class="font-bold text-lg mb-1">간편한 송금 서비스</h3>
-                <p class="text-gray-600">
-                  계좌번호 없이도 휴대폰 번호나 이메일로 간편하게 송금할 수
-                  있습니다.
-                </p>
-              </div>
-            </div>
-            <div class="flex items-start gap-4">
-              <div class="text-2xl text-chick-orange">✓</div>
-              <div>
-                <h3 class="font-bold text-lg mb-1">자동 저축 기능</h3>
-                <p class="text-gray-600">
-                  목표 금액을 설정하고 자동으로 저축할 수 있는 스마트 저축
-                  기능을 제공합니다.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section> -->
 
   <section class="py-16 bg-chick-light">
     <div class="container mx-auto px-4 text-center">
@@ -265,7 +229,12 @@
     <div class="container mx-auto px-4">
       <div class="flex flex-col md:flex-row justify-between items-center mb-8">
         <div class="flex items-center gap-3 mb-6 md:mb-0">
-          <div class="text-4xl">🐥</div>
+
+
+          <div class="text-4xl"><img src="{% static 'images/image.png' %}" alt="Chick Pay" class="w-[50px] h-auto">
+          </div>
+
+
           <h1 class="text-2xl font-bold text-chick-brown">Chick Pay</h1>
         </div>
 
@@ -279,48 +248,12 @@
       </div>
 
       <div class="text-center">
-        <p>&copy; 2025 Chick Pay. 모든 권리 보유. 🐥</p>
+        <p>&copy; 2025 Chick Pay. 모든 권리 보유.
+          <img src="{% static 'images/image.png' %}" alt="Chick Pay" class="w-[18px] h-auto inline">
+        </p>
       </div>
     </div>
   </footer>
 </body>
 
 </html>
-
-<!-- <script>
-  // 모바일 메뉴 토글
-  const menuButton = document.querySelector("button");
-  const nav = document.querySelector("nav");
-
-  menuButton.addEventListener("click", function () {
-    if (nav.classList.contains("hidden")) {
-      nav.classList.remove("hidden");
-      nav.classList.add(
-        "flex",
-        "flex-col",
-        "absolute",
-        "top-16",
-        "right-4",
-        "bg-white",
-        "p-4",
-        "rounded-xl",
-        "shadow-lg",
-        "z-50"
-      );
-    } else {
-      nav.classList.add("hidden");
-      nav.classList.remove(
-        "flex",
-        "flex-col",
-        "absolute",
-        "top-16",
-        "right-4",
-        "bg-white",
-        "p-4",
-        "rounded-xl",
-        "shadow-lg",
-        "z-50"
-      );
-    }
-  });
-</script> -->

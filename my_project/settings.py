@@ -8,10 +8,34 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
+
+
 """
 import os 
 
 from pathlib import Path
+from opentelemetry import trace
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import (
+    SimpleSpanProcessor,
+    ConsoleSpanExporter,
+)
+from dotenv import load_dotenv
+from pathlib import Path
+
+# 자원 메타 정보 설정
+resource = Resource(attributes={
+    "service.name": "zapp-backend",
+})
+
+# Tracer 프로바이더 설정
+provider = TracerProvider(resource=resource)
+trace.set_tracer_provider(provider)
+
+# Exporter 설정 (여기선 콘솔로 출력)
+span_processor = SimpleSpanProcessor(ConsoleSpanExporter())
+provider.add_span_processor(span_processor)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,7 +48,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-_k1lu*hx@02_hqr!+v+r=z^!sh(wk(nzj#kb5!8up!3+5&_f6&"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -43,6 +66,10 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'rest_framework',
     "zapp",
+    'drf_spectacular',
+    'drf_spectacular_sidecar',
+    #aws s3
+    'storages',
 ]
 
 MIDDLEWARE = [
@@ -79,15 +106,16 @@ WSGI_APPLICATION = "my_project.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / '.env')
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'bankdb',
-        'USER': 'postgres',
-        'PASSWORD': 'testpass',
-        'HOST': 'synology.koreano1.duckdns.org',
-        'PORT': '25432',
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'HOST': os.environ.get('DB_HOST'),
+        'PORT': os.environ.get('DB_PORT'),
     }
 }
 
@@ -110,6 +138,8 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+DEBUG = True
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
@@ -126,7 +156,14 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = "https://d13g1etgrsjc85.cloudfront.net/"
+
+#로컬에서도 개발하고 싶으면
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static')
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -134,6 +171,8 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.TemplateHTMLRenderer',
@@ -143,13 +182,53 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ),
     'DEFAULT_CHARSET': 'utf-8',
+
 }
 
-    # 'DEFAULT_AUTHENTICATION_CLASSES': (
-    #     'rest_framework.authentication.TokenAuthentication',
-    # ),
-    # 'DEFAULT_PERMISSION_CLASSES': (
-    #     'rest_framework.permissions.IsAuthenticated',  # 옵션: 인증된 사용자만 허용
-    # ),
+CSRF_TRUSTED_ORIGINS = [
+    'https://chick-pay.com',
+    'https://www.chick-pay.com',
+]
 
-STATIC_URL = '/static/'
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+]
+
+
+#세션 설정
+SESSION_COOKIE_AGE = 1800
+
+SESSION_SAVE_EVERY_REQUEST = True
+
+
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+    },
+    "staticfiles": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+	}
+}
+
+
+# AWS 설정
+# AWS 인증 정보 (환경변수로도 설정 가능)
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
+AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME')
+AWS_S3_SIGNATURE_VERSION = 's3v4'
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = None
+
+# S3의 URL 설정
+AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com"
+STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/static/"
+MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/media/"
+
+# boto3 정적파일 저장 위치 설정
+# STATICFILES_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
+
+

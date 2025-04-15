@@ -1,0 +1,41 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+      - sub
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ✅ Checkout code
+        uses: actions/checkout@v3
+
+      - name: 🚀 Deploy via SSH to EC2 with Docker + Create .env file
+        uses: appleboy/ssh-action@master
+        with:
+          host: 43.202.96.168
+          username: ubuntu
+          key: ${{ secrets.ZAPP_SECRET }}
+          port: 22
+          script: |
+            echo "📦 이동해서 코드 갱신"
+            cd /home/ubuntu/Chick-pay
+
+            echo "🔐 .env 복원 시작 (base64 decode)"
+            echo "${{ secrets.ENV_FILE }}" | base64 -d > .env
+
+            echo "🔄 Git pull"
+            git pull origin sub
+
+            echo "🧹 기존 컨테이너/이미지 정리"
+            docker compose down --remove-orphans || true
+            docker system prune -af || true
+
+            echo "🛠️ Docker Compose 재빌드 (다운 없이)"
+            docker compose up -d --build
+
+            echo "✅ 서비스 재시작 완료!"
